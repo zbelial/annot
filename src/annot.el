@@ -75,6 +75,12 @@
   :type  'string
   :group 'annot)
 
+(defcustom annot-directory-alist nil
+  "Alist of directory in which files will be annotated and annot directory names."
+  :group 'annot
+  :type '(repeat (cons (directory :tag "Directory be annotated")
+		       (directory :tag "Annot directory name"))))
+
 (defcustom annot-text-decoration-function 'annot-decorate-text
   "Function to decorate an annotation text."
   :type  'symbol
@@ -480,6 +486,16 @@ with indirect buffers."
   (replace-regexp-in-string
    "\\`[^[:graph:]]+\\|[^[:graph:]]+\\'"  "" s))
 
+(defsubst annot-contents-directory2 (filename)
+  (format "%s/%s" annot-directory annot-contents-dirname))
+
+(defsubst annot-symlinks-directory2 (filename)
+  (format "%s/%s" annot-directory annot-symlinks-dirname))
+
+(defsubst annot-get-annot-filename2 (md5)
+  "Return the full path of the annotation filename."
+  (expand-file-name (format "%s/%s"
+                            (annot-contents-directory) md5)))
 
 (defsubst annot-contents-directory ()
   (format "%s/%s" annot-directory annot-contents-dirname))
@@ -778,8 +794,27 @@ Create the annot content directory if it does not exist."
     (erase-buffer)
     (insert content)))
 
+(defun annot-save-content2 (content annot-filename)
+  "Write `content' into a `annot-filename'.
+Create the annot content directory if it does not exist."
+  (unless (file-exists-p (annot-contents-directory))
+    (make-directory (annot-contents-directory) t))
+  (with-temp-file annot-filename
+    (erase-buffer)
+    (insert content)))
+
 
 (defun annot-save-symlink (md5 filename)
+  "Make a symbolic link pointing to an annot-filename."
+  (let ((symlinks-dir (annot-symlinks-directory)))
+    (unless (file-exists-p symlinks-dir)
+      (make-directory symlinks-dir))
+    (make-symbolic-link
+     (format "../%s/%s" annot-contents-dirname md5)
+     (annot-get-symlink filename)
+     'ok-if-already-exists)))
+
+(defun annot-save-symlink2 (md5 filename)
   "Make a symbolic link pointing to an annot-filename."
   (let ((symlinks-dir (annot-symlinks-directory)))
     (unless (file-exists-p symlinks-dir)
