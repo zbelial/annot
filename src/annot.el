@@ -480,26 +480,38 @@ with indirect buffers."
   (replace-regexp-in-string
    "\\`[^[:graph:]]+\\|[^[:graph:]]+\\'"  "" s))
 
+(defsubst annot-assoc-matched-filename (filename)
+  "Return annot-directory-alist item which matches filename most."
+  (let ((max 0)
+        result)
+    (dolist (assoc annot-directory-alist)
+      (when (string-prefix-p (cadr assoc) filename)
+        (when (> (length (cadr assoc)) max)
+          (setq result assoc)
+          (setq max (length (cadr assoc))))))
+    (identity result)))
+
+(defsubst annot-assoc-matched-tag (tag)
+  "Return annot-directory-alist item matching tag."
+  (cl-find-if
+   (lambda (x)
+     (string= (car x) tag))
+   annot-directory-alist))
+
+(defun annot-check-annot ()
+  (interactive)
+  (message "%S" (annot-file-tag (annot-buffer-file-name))))
+
 (defsubst annot-contents-directory (filename)
   "Return contents directory of filename"
-  (message "filename %s" filename)
-  (let ((annot-dir-assoc (cl-find-if
-                    (lambda (x)
-                      (message "%s" (cadr x))
-                      (string-prefix-p (cadr x) filename))
-                    annot-directory-alist)))
+  (let ((annot-dir-assoc (annot-assoc-matched-filename filename)))
     (if annot-dir-assoc
         (format "%s/%s" (cddr annot-dir-assoc) annot-contents-dirname)
       (format "%s/%s" annot-default-directory annot-contents-dirname))))
 
 (defsubst annot-file-tag (filename)
   "Return base directory of filename"
-  (message "filename %s" filename)
-  (let ((annot-dir-assoc (cl-find-if
-                    (lambda (x)
-                      (message "%s" (cadr x))
-                      (string-prefix-p (cadr x) filename))
-                    annot-directory-alist)))
+  (let ((annot-dir-assoc (annot-assoc-matched-filename filename)))
     (if annot-dir-assoc
         (car annot-dir-assoc)
       annot-default-tag
@@ -507,24 +519,14 @@ with indirect buffers."
 
 (defsubst annot-contents-directory-tag (tag)
   "Return contents directory using tag"
-  (message "tag %s" tag)
-  (let ((annot-dir-assoc (cl-find-if
-                    (lambda (x)
-                      (message "%s" (car x))
-                      (string= (car x) tag))
-                    annot-directory-alist)))
+  (let ((annot-dir-assoc (annot-assoc-matched-tag tag)))
     (if annot-dir-assoc
         (format "%s/%s" (cddr annot-dir-assoc) annot-contents-dirname)
       (format "%s/%s" annot-default-directory annot-contents-dirname))))
 
 (defsubst annot-file-base-directory (filename)
   "Return base directory of filename"
-  (message "filename %s" filename)
-  (let ((annot-dir-assoc (cl-find-if
-                    (lambda (x)
-                      (message "%s" (cadr x))
-                      (string-prefix-p (cadr x) filename))
-                    annot-directory-alist)))
+  (let ((annot-dir-assoc (annot-assoc-matched-filename filename)))
     (if annot-dir-assoc
         (cadr annot-dir-assoc)
       "/"
@@ -532,12 +534,7 @@ with indirect buffers."
 
 (defsubst annot-file-base-directory-tag (tag)
   "Return base directory of tag"
-  (message "tag %s" tag)
-  (let ((annot-dir-assoc (cl-find-if
-                    (lambda (x)
-                      (message "%s" (car x))
-                      (string= (car x) tag))
-                    annot-directory-alist)))
+  (let ((annot-dir-assoc (annot-assoc-matched-tag tag)))
     (if annot-dir-assoc
         (cadr annot-dir-assoc)
       "/"
@@ -545,12 +542,7 @@ with indirect buffers."
 
 (defsubst annot-file-relative-path (filename)
   "Return relative path of filename to annot-file-base-directory"
-  (message "filename %s" filename)
-  (let ((annot-dir-assoc (cl-find-if
-                    (lambda (x)
-                      (message "%s" (cadr x))
-                      (string-prefix-p (cadr x) filename))
-                    annot-directory-alist)))
+  (let ((annot-dir-assoc (annot-assoc-matched-filename filename)))
     (if annot-dir-assoc
         (s-chop-prefix (cadr annot-dir-assoc) filename)
       (s-chop-prefix "/" filename)
@@ -558,12 +550,7 @@ with indirect buffers."
 
 (defsubst annot-symlinks-directory (filename)
   "Return contents directory of filename"
-  (message "filename %s" filename)
-  (let ((annot-dir-assoc (cl-find-if
-                    (lambda (x)
-                      (message "%s" (cadr x))
-                      (string-prefix-p (cadr x) filename))
-                    annot-directory-alist)))
+  (let ((annot-dir-assoc (annot-assoc-matched-filename filename)))
     (if annot-dir-assoc
         (format "%s/%s" (cddr annot-dir-assoc) annot-symlinks-dirname)
       (format "%s/%s" annot-default-directory annot-symlinks-dirname))))
@@ -730,7 +717,7 @@ the region ends."
     (overlay-put ov :modtime (or modtime (float-time)))
     ov))
 
-(defun annot-format-overlays (md5 tag relative-filename bufname modtime)
+(defun annot-format-overlays (md5 tag relative-filename modtime)
   "Generate a string containing all information necessary to reproduce annotations."
   (let ((ov-plists-s
          (let ((print-escape-newlines t))    ;; newline is represented as "\n"
@@ -741,13 +728,12 @@ the region ends."
 \(annot-recover-annotations '\(
 :md5 %S
 :tag %S
-:relative-filename %S
-:bufname %S
+:relative-filename %s
 :modtime %S
 :md5-max-chars %S
 :annotations \(
 %s
-)))" md5 tag relative-filename bufname modtime annot-md5-max-chars ov-plists-s)))
+)))" md5 tag relative-filename modtime annot-md5-max-chars ov-plists-s)))
 
 (defun annot-save-annotations ()
   "Save all annotations in the buffer, updating all information.
@@ -766,7 +752,6 @@ previous filename, return delete the previous file."
           (dirname (annot-file-base-directory-tag tag))
           (relative-filename (plist-get annot-buffer-plist :relative-filename))
           (filename (concat dirname relative-filename))
-          ;; (filename (plist-get annot-buffer-plist :filename))
           old-annot-filename symlink)
       (when (and filename md5)
         (setq old-annot-filename (annot-get-annot-filename filename md5))
@@ -800,7 +785,7 @@ previous filename, return delete the previous file."
                  (md5 (annot-md5 buffer))
                  (annot-filename (annot-get-annot-filename filename md5))
                  (modtime (or (plist-get annot-buffer-plist :modtime) (float-time)))
-                 (bufname (buffer-name)) s)
+                 s)
             ;; Update ((:beg/:end)|:pos) and :prev/:next of each overlay
             (dolist (ov annot-buffer-overlays)
               (let ((beg (overlay-start ov))
@@ -825,7 +810,7 @@ previous filename, return delete the previous file."
                   (delete-file (annot-get-symlink prev-filename))))
 
             ;; Get the S-expression and save the annotations
-            (setq s (annot-format-overlays md5 tag relative-filename bufname modtime))
+            (setq s (annot-format-overlays md5 tag relative-filename modtime))
             (condition-case error
                 (progn
                   (annot-save-content s filename annot-filename)
@@ -835,7 +820,7 @@ previous filename, return delete the previous file."
                (warn "annot-save-annotations: %s" (error-message-string error))))
 
             ;; Update `annot-buffer-plist'
-            (dolist (e '(md5 dirname relative-filename bufname annot-filename modtime))
+            (dolist (e '(md5 tag dirname relative-filename modtime))
               (setq annot-buffer-plist
                     (plist-put annot-buffer-plist
                                (intern (format ":%S" e)) (symbol-value e))))
@@ -1009,7 +994,6 @@ Only annotation files use this function internally."
             `(:md5 ,(plist-get annotations-info :md5)
                    :tag       ,(plist-get annotations-info :tag)
                    :relative-filename       ,(plist-get annotations-info :relative-filename)
-                   :bufname        ,(plist-get annotations-info :bufname)
                    :modtime        ,modtime)))))
 
 (defun annot-delete-annotations-region (r-beg r-end)
