@@ -474,16 +474,26 @@ captured."
 ;;    (or (buffer-base-buffer)
 ;;        (current-buffer))))
 
+(defsubst annot-remove-html-anchor (file-name)
+  ""
+  (let* ((len (length file-name))
+         (pos-of-anchor (s-index-of "#" file-name)))
+    (if (not pos-of-anchor) ;; no anchor part
+        file-name
+      (substring file-name 0 pos-of-anchor))
+    )
+  )
+
 (defsubst annot-buffer-file-name ()
   "Same as \(buffer-file-name) but is extended to be compatible
 with indirect buffers."
   (cond
    ((eq major-mode 'eww-mode)
     (setq file-name (eww-current-url))
-    (substring file-name (length "file://")))
+    (annot-remove-html-anchor (substring file-name (length "file://"))))
    ((eq major-mode 'w3m-mode)
     (setq file-name (w3m-print-current-url))
-    (substring file-name (length "file://")))
+    (annot-remove-html-anchor (substring file-name (length "file://"))))
    (t
     (buffer-file-name
      (or (buffer-base-buffer)
