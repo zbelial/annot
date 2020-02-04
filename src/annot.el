@@ -467,13 +467,28 @@ captured."
 
 ;;;; Internal functions.
 
+;; (defsubst annot-buffer-file-name ()
+;;   "Same as \(buffer-file-name) but is extended to be compatible
+;; with indirect buffers."
+;;   (buffer-file-name
+;;    (or (buffer-base-buffer)
+;;        (current-buffer))))
+
 (defsubst annot-buffer-file-name ()
   "Same as \(buffer-file-name) but is extended to be compatible
 with indirect buffers."
-  (buffer-file-name
-   (or (buffer-base-buffer)
-       (current-buffer))))
-
+  (cond
+   ((eq major-mode 'eww-mode)
+    (setq file-name (eww-current-url))
+    (substring file-name (length "file://")))
+   ((eq major-mode 'w3m-mode)
+    (setq file-name (w3m-print-current-url))
+    (substring file-name (length "file://")))
+   (t
+    (buffer-file-name
+     (or (buffer-base-buffer)
+         (current-buffer))))
+   ))
 
 (defsubst annot-trim (s)
   "Trim non-graphic chars from both ends of string s."
@@ -728,7 +743,7 @@ the region ends."
 \(annot-recover-annotations '\(
 :md5 %S
 :tag %S
-:relative-filename %s
+:relative-filename \"%s\"
 :modtime %S
 :md5-max-chars %S
 :annotations \(
