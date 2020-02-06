@@ -63,6 +63,8 @@
 ;; * `annot-goto-next'  - Go to the next annot overlay
 ;; * `annot-goto-previous' - Go to the previous annot overlay
 
+;; TODO:
+
 ;;; Code:
 
 (require 's)
