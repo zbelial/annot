@@ -254,6 +254,8 @@ If a marked region is present, highlight it."
 (defun annot-add-image (&optional image-filename)
   "Insert an image on the current point."
   (interactive)
+  (if (not (annot-buffer-local-file-p))
+      (error "buffer is not local file."))
   (if (and window-system (display-images-p))
       (let ((image-filename
              (or image-filename
@@ -318,6 +320,8 @@ If a regioin is specified, remove all annotations and highlights within it."
   "Either edit the annotation at point, if there is, or else add a new one.
 If a region is specified, a highlight annotation will be added or edited."
   (interactive)
+  (if (not (annot-buffer-local-file-p))
+      (error "buffer is not local file."))
   (let (ov)
     (cond
      ((region-active-p)
@@ -331,6 +335,8 @@ If a region is specified, a highlight annotation will be added or edited."
 (defun annot-convert ()
   "Convert text within the active region into an annot text annotation."
   (interactive)
+  (if (not (annot-buffer-local-file-p))
+      (error "buffer is not local file."))
   (when (and (region-active-p)
              (> (- (region-end) (region-beginning)) 0))
     (let ((text (prog1
@@ -346,7 +352,7 @@ If current `annot-buffer-overlays' looks newer \(which shouldn't
 happen as long as you keep using annot), it asks whether to load
 the file or not."
   (interactive)
-  (unless (member major-mode annot-load-disabled-modes)
+  (unless (or (member major-mode annot-load-disabled-modes) (not (annot-buffer-local-file-p)))
     (let ((current-md5 (annot-md5 (current-buffer)))
           filename)
       (when (or (file-readable-p
@@ -491,16 +497,22 @@ captured."
 with indirect buffers."
   (cond
    ((eq major-mode 'eww-mode)
-    (setq file-name (eww-current-url))
-    (annot-remove-html-anchor (substring file-name (length "file://"))))
+    (setq buffer-url (eww-current-url))
+    (when (string-prefix-p "file://" buffer-url)
+      (annot-remove-html-anchor (substring buffer-url (length "file://")))))
    ((eq major-mode 'w3m-mode)
-    (setq file-name (w3m-print-current-url))
-    (annot-remove-html-anchor (substring file-name (length "file://"))))
+    (setq buffer-url w3m-current-url)
+    (when (string-prefix-p "file://" buffer-url)
+      (annot-remove-html-anchor (substring buffer-url (length "file://")))))
    (t
     (buffer-file-name
      (or (buffer-base-buffer)
          (current-buffer))))
    ))
+
+(defsubst annot-buffer-local-file-p ()
+  (if (annot-buffer-file-name)
+      t))
 
 (defsubst annot-trim (s)
   "Trim non-graphic chars from both ends of string s."
