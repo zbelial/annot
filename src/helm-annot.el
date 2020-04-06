@@ -40,7 +40,8 @@
 ;;
 ;;
 ;; TODO:
-;; 1. 选择某个注解时，buffer中自动展示对应行
+;; 1. 通过多
+;; 2. 选择某个注解时，buffer中自动展示对应行
 ;;
 ;;
 ;; User Commands:
@@ -125,6 +126,7 @@
     (init . (lambda () (helm-annot-init)))
     (multiline)
     (volatile)
+    (fuzzy-match . nil)
     (candidates . helm-annot-candidate-transformer)
     (action . (lambda (candidate)
                 (setq line (nth 0 (split-string candidate ":")))
@@ -137,6 +139,7 @@
     (init . (lambda () (helm-annot-init 'text)))
     (multiline)
     (volatile)
+    (fuzzy-match . nil)
     (candidates . helm-annot-candidate-transformer)
     (action . (lambda (candidate)
                 (setq line (nth 0 (split-string candidate ":")))
@@ -149,6 +152,7 @@
     (init . (lambda () (helm-annot-init 'highlight)))
     (multiline)
     (volatile)
+    (fuzzy-match . nil)
     (candidates . helm-annot-candidate-transformer)
     (action . (lambda (candidate)
                 (setq line (nth 0 (split-string candidate ":")))

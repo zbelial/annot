@@ -171,14 +171,14 @@ annot will save fuf's folding & unfolding states."
 (defconst annot-default-tag "__DEFAULT_TAG__")
 
 (defface annot-text-face
-  '((((class color) (background light)) (:foreground "red" :background "yellow"))
-    (((class color) (background dark)) (:foreground "red" :background "white")))
+  '((((class color) (background light)) (:foreground "dark red"))
+    (((class color) (background dark)) (:foreground "IndianRed4")))
   "Face for annotation text."
   :group 'annot)
 
 (defface annot-highlighter-face
   '((((class color) (background light)) (:background "yellow"))
-    (((class color) (background dark)) (:foreground "white" :background "red2")))
+    (((class color) (background dark)) (:foreground "white" :background "IndianRed4")))
   "Face for highlighted text."
   :group 'annot)
 
@@ -352,9 +352,9 @@ If current `annot-buffer-overlays' looks newer \(which shouldn't
 happen as long as you keep using annot), it asks whether to load
 the file or not."
   (interactive)
-  (unless (or (member major-mode annot-load-disabled-modes) (not (annot-buffer-local-file-p)))
+  (unless (or (member major-mode annot-load-disabled-modes)  (not (annot-buffer-local-file-p)) (not (file-exists-p (annot-buffer-file-name))))
     (let ((current-md5 (annot-md5 (current-buffer)))
-          filename)
+          (filename (annot-buffer-file-name)))
       (when (or (file-readable-p
                  (setq filename (annot-get-annot-filename (annot-buffer-file-name) current-md5)))
                 ;; If md5 fails, try symlink.
@@ -600,16 +600,21 @@ with indirect buffers."
                             (annot-contents-directory filename) md5)))
 
 
+;; (defsubst annot-md5 (&optional buffer)
+;;   "Get md5 of the buffer content with max chars `annot-md5-max-chars'.
+;; If `annot-md5-max-chars' is nil, no limit is imposed."
+;;   (let ((buffer (or buffer (current-buffer))))
+;;     (md5 buffer nil
+;;          (if (null annot-md5-max-chars)
+;;              nil
+;;            (min annot-md5-max-chars (point-max)))
+;;          nil t)))
+
 (defsubst annot-md5 (&optional buffer)
   "Get md5 of the buffer content with max chars `annot-md5-max-chars'.
 If `annot-md5-max-chars' is nil, no limit is imposed."
-  (let ((buffer (or buffer (current-buffer))))
-    (md5 buffer nil
-         (if (null annot-md5-max-chars)
-             nil
-           (min annot-md5-max-chars (point-max)))
-         nil t)))
-
+  (with-current-buffer (or buffer (current-buffer))
+    (md5 (f-read-bytes (annot-buffer-file-name)))))
 
 (defsubst annot-argmax (L fn)
   (let* ((best (car L))
