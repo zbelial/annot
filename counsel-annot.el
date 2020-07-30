@@ -120,8 +120,8 @@
   (mapcar #'(lambda (candidate)
               (let ((type (nth 1 candidate)))
                 (if (eq type 'text)
-                    (format " %d: <T>     : %s" (nth 0 candidate) (nth 2 candidate))
-                  (format " %d: <H>     : %s" (nth 0 candidate) (nth 2 candidate)))))
+                    (format " %-4d <T>     : %s" (nth 0 candidate) (annot-trim (nth 2 candidate)))
+                  (format " %-4d <H>     : %s" (nth 0 candidate) (nth 2 candidate)))))
           counsel-annot--annotations)
   )
 
