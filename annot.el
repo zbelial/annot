@@ -1053,9 +1053,9 @@ Only annotation files use this function internally."
 
 ;;;; Keybindings.
 
-(define-key ctl-x-map "\C-a" 'annot-edit/add)
-(define-key ctl-x-map "\C-r" 'annot-remove)
-(define-key ctl-x-map "\C-i" 'annot-add-image)
+;; (define-key ctl-x-map "\C-a" 'annot-edit/add)
+;; (define-key ctl-x-map "\C-r" 'annot-remove)
+;; (define-key ctl-x-map "\C-i" 'annot-add-image)
 ;; (define-key ctl-x-map "a" 'annot-edit/add)
 ;; (define-key ctl-x-map "r" 'annot-remove)
 ;; (define-key ctl-x-map "w" 'annot-add-image)
