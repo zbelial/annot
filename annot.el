@@ -712,21 +712,6 @@ the region ends."
           (modtime (float-time))
           ov-list a b)
       (setq ov-list (list (annot-create-highlight-overlay beg end modtime)))
-      ;; (save-excursion
-      ;;   (goto-char beg)
-      ;;   (while (and
-      ;;           (< (point) end)
-      ;;           (re-search-forward "[[:graph:]]" end t)
-      ;;           (setq a (goto-char (match-beginning 0))))
-      ;;     (if (and
-      ;;          (re-search-forward "[[:graph:]][^[:graph:]]*?$" end t)
-      ;;          (setq b (goto-char (1+ (match-beginning 0)))))
-      ;;         (push (annot-create-highlight-overlay a b modtime) ov-list)
-      ;;       (goto-char end)
-      ;;       (save-excursion
-      ;;         (when (re-search-backward "[[:graph:]]" beg t)
-      ;;           (push (annot-create-highlight-overlay a (match-end 0) modtime)
-      ;;                 ov-list))))))
       ov-list))))
 
 (defun annot-file-exists-p ()
@@ -1082,6 +1067,12 @@ Only annotation files use this function internally."
                 (and (>= r-end end) (>= beg r-beg)))
         (annot-remove ov t)))))
 
+
+(defun annot-annot-filename (&optional filename)
+  (interactive)
+  (let ((filename (or filename (buffer-file-name))))
+    (when (and filename (f-exists-p filename))
+      (annot-get-annot-filename filename (md5 (f-read-bytes filename))))))
 
 ;;;; Keybindings.
 
