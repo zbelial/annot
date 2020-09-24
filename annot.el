@@ -664,6 +664,38 @@ If `annot-md5-max-chars' is nil, no limit is imposed."
             (throw :result t)))))))
 
 
+;; (defun annot-create-new (text/image/region)
+;;   "Create a new list of overlay(s) depending of the content of `text/image/region'.
+;; In particular, a text highlight may yield multiple overlays depending on
+;; the region ends."
+;;   (cond
+;;    ((or (null text/image/region)
+;;         (stringp text/image/region))
+;;     (let ((text/image (or text/image/region (read-string "Annotation: "))))
+;;       (unless (zerop (length (annot-trim text/image)))
+;;         (list (annot-create-overlay (point) text/image)))))
+;;    ((listp text/image/region)
+;;     (let ((beg (car text/image/region))
+;;           (end (cdr text/image/region))
+;;           (modtime (float-time))
+;;           ov-list a b)
+;;       (save-excursion
+;;         (goto-char beg)
+;;         (while (and
+;;                 (< (point) end)
+;;                 (re-search-forward "[[:graph:]]" end t)
+;;                 (setq a (goto-char (match-beginning 0))))
+;;           (if (and
+;;                (re-search-forward "[[:graph:]][^[:graph:]]*?$" end t)
+;;                (setq b (goto-char (1+ (match-beginning 0)))))
+;;               (push (annot-create-highlight-overlay a b modtime) ov-list)
+;;             (goto-char end)
+;;             (save-excursion
+;;               (when (re-search-backward "[[:graph:]]" beg t)
+;;                 (push (annot-create-highlight-overlay a (match-end 0) modtime)
+;;                       ov-list))))))
+;;       ov-list))))
+
 (defun annot-create-new (text/image/region)
   "Create a new list of overlay(s) depending of the content of `text/image/region'.
 In particular, a text highlight may yield multiple overlays depending on
@@ -679,23 +711,23 @@ the region ends."
           (end (cdr text/image/region))
           (modtime (float-time))
           ov-list a b)
-      (save-excursion
-        (goto-char beg)
-        (while (and
-                (< (point) end)
-                (re-search-forward "[[:graph:]]" end t)
-                (setq a (goto-char (match-beginning 0))))
-          (if (and
-               (re-search-forward "[[:graph:]][^[:graph:]]*?$" end t)
-               (setq b (goto-char (1+ (match-beginning 0)))))
-              (push (annot-create-highlight-overlay a b modtime) ov-list)
-            (goto-char end)
-            (save-excursion
-              (when (re-search-backward "[[:graph:]]" beg t)
-                (push (annot-create-highlight-overlay a (match-end 0) modtime)
-                      ov-list))))))
+      (setq ov-list (list (annot-create-highlight-overlay beg end modtime)))
+      ;; (save-excursion
+      ;;   (goto-char beg)
+      ;;   (while (and
+      ;;           (< (point) end)
+      ;;           (re-search-forward "[[:graph:]]" end t)
+      ;;           (setq a (goto-char (match-beginning 0))))
+      ;;     (if (and
+      ;;          (re-search-forward "[[:graph:]][^[:graph:]]*?$" end t)
+      ;;          (setq b (goto-char (1+ (match-beginning 0)))))
+      ;;         (push (annot-create-highlight-overlay a b modtime) ov-list)
+      ;;       (goto-char end)
+      ;;       (save-excursion
+      ;;         (when (re-search-backward "[[:graph:]]" beg t)
+      ;;           (push (annot-create-highlight-overlay a (match-end 0) modtime)
+      ;;                 ov-list))))))
       ov-list))))
-
 
 (defun annot-file-exists-p ()
   "Returns an annotation filename if current buffer accompanies with it."
