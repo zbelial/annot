@@ -56,11 +56,22 @@
 (require 'annot)
 (require 'cl-lib)
 (require 'ivy)
+(require 's)
 
 (defgroup counsel-annot nil
   "Annotation manager in Emacs."
   :prefix "counsel-annot-"
-  :group 'tools)
+  :group 'annot)
+
+(defcustom counsel-annot-join-lines nil
+  "If enabled, join lines of multiline highlight annotation."
+  :type 'boolean
+  :group 'annot)
+
+
+(defun counsel-annot-toggle-join-lines ()
+  (interactive)
+  (setq counsel-annot-join-lines (not counsel-annot-join-lines)))
 
 (defun counsel-annot--overlay-begin (ov)
   (or (overlay-get ov :beg)
@@ -74,9 +85,9 @@
   (if (equal type 'text)
       (substring-no-properties
        (or (overlay-get ov 'before-string) ""))
-    (save-excursion
-      (buffer-substring-no-properties begin end)
-    )))
+    (if counsel-annot-join-lines
+        (s-replace "\n" " " (buffer-substring-no-properties begin end))
+      (buffer-substring-no-properties begin end))))
 
 (defun counsel-annot--candidate (ov)
   (let* ((begin (counsel-annot--overlay-begin ov))
@@ -86,17 +97,6 @@
          (linum (line-number-at-pos begin))
          )
     (list linum type text begin end)
-    ))
-
-(defvar counsel-annot--annotations nil)
-
-(defun counsel-annot-init (&optional type)
-  (if type 
-      (setq counsel-annot--annotations (delq nil (mapcar #'(lambda (candidate)
-                                                          (when (equal type (nth 1 candidate))
-                                                            candidate))
-                                                      (counsel-annot--make-annotations))))
-    (setq counsel-annot--annotations (counsel-annot--make-annotations))
     ))
 
 (defun counsel-annot< (a1 a2)
@@ -116,37 +116,30 @@
     (cl-sort candidates 'counsel-annot<)
     )))
 
-(defun counsel-annot-candidate-transformer ()
+(defun counsel-annot-candidate-transformer (annots)
   (mapcar #'(lambda (candidate)
               (let ((type (nth 1 candidate)))
                 (if (eq type 'text)
                     (format " %-4d <T>     : %s" (nth 0 candidate) (annot-trim (nth 2 candidate)))
                   (format " %-4d <H>     : %s" (nth 0 candidate) (nth 2 candidate)))))
-          counsel-annot--annotations)
+          annots)
   )
 
-
-(defun counsel-annot-function (str)
-  (when (not counsel-annot--annotations)
-    (counsel-annot-init)
-    (setq counsel-annot--annotations (counsel-annot-candidate-transformer))
-    )
-  (let ((regexp (ivy--regex str)))
-    (remove-if-not #'(lambda (candidate) (string-match-p regexp candidate)) counsel-annot--annotations)
-    )
-  )
+(defun counsel-annot-collector ()
+  (let ((annots (counsel-annot-candidate-transformer (counsel-annot--make-annotations))))
+    annots
+    ))
 
 (defun counsel-annot-annotations ()
   (interactive)
-  (let ((cb (current-buffer)))
+  (let ((annots (counsel-annot-collector)))
     (ivy-read "Annotations: "
-              #'counsel-annot-function
-              :dynamic-collection t
+              annots
+              :dynamic-collection nil
               :action #'(lambda (candidate)
                           (setq line (nth 0 (split-string candidate ":")))
                           (goto-line (string-to-number line))
                           )
-              :unwind #'(lambda () (setq counsel-annot--annotations nil))
               ))
   )
 
