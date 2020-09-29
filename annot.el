@@ -1070,7 +1070,7 @@ Only annotation files use this function internally."
 
 (defun annot-annot-filename (&optional filename)
   (interactive)
-  (let ((filename (or filename (buffer-file-name))))
+  (let ((filename (or filename (annot-buffer-file-name))))
     (if (and filename (f-exists-p filename))
         (message (format "%s" (annot-get-annot-filename filename (md5 (f-read-bytes filename)))))
       (message "Not a valid file to create annotations for it."))))
