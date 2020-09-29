@@ -55,6 +55,7 @@
 
 (require 'annot)
 (require 'cl-lib)
+(require 'compile) ;; compilation-info-face, compilation-line-face
 (require 'ivy)
 (require 's)
 
@@ -120,8 +121,8 @@
   (mapcar #'(lambda (candidate)
               (let ((type (nth 1 candidate)))
                 (if (eq type 'text)
-                    (format " %-4d <T>     : %s" (nth 0 candidate) (annot-trim (nth 2 candidate)))
-                  (format " %-4d <H>     : %s" (nth 0 candidate) (nth 2 candidate)))))
+                    (format " %-4s %s  : %s" (propertize (number-to-string (nth 0 candidate)) 'face compilation-line-face) (propertize "<T>" 'face compilation-info-face) (annot-trim (nth 2 candidate)))
+                  (format " %-4s %s  : %s" (propertize (number-to-string (nth 0 candidate)) 'face compilation-line-face) (propertize "<H>" 'face compilation-info-face) (nth 2 candidate)))))
           annots)
   )
 
