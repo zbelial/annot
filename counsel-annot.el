@@ -58,6 +58,7 @@
 (require 'compile) ;; compilation-info-face, compilation-line-face
 (require 'ivy)
 (require 's)
+(require 'rx)
 
 (defgroup counsel-annot nil
   "Annotation manager in Emacs."
@@ -87,7 +88,7 @@
       (substring-no-properties
        (or (overlay-get ov 'before-string) ""))
     (if counsel-annot-join-lines
-        (s-replace "\n" " " (buffer-substring-no-properties begin end))
+        (replace-regexp-in-string (rx (zero-or-more " ") (one-or-more "\n") (zero-or-more " ")) " " (buffer-substring-no-properties begin end))
       (buffer-substring-no-properties begin end))))
 
 (defun counsel-annot--candidate (ov)
