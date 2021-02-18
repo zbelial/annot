@@ -98,13 +98,13 @@
          (text (counsel-annot--overlay-text type begin end ov))
          (linum (line-number-at-pos begin))
          )
-    (list linum type text begin end)
+    (list :linum linum :type type :text text :begin begin :end end)
     ))
 
 (defun counsel-annot< (a1 a2)
-  (if (= (car a1) (car a2))
-      (< (nth 3 a1) (nth 3 a2))
-    (< (car a1) (car a2))
+  (if (= (plist-get a1 :linum) (plist-get a2 :linum))
+      (< (plist-get a1 :begin) (plist-get a2 :begin))
+    (< (plist-get a1 :linum) (plist-get a2 :linum))
   ))
 
 (defun counsel-annot--make-annotations()
@@ -120,10 +120,10 @@
 
 (defun counsel-annot-candidate-transformer (annots)
   (mapcar #'(lambda (candidate)
-              (let ((type (nth 1 candidate)))
+              (let ((type (plist-get :type candidate)))
                 (if (eq type 'text)
-                    (format " %-4s %s  : %s" (propertize (number-to-string (nth 0 candidate)) 'face compilation-line-face) (propertize "<T>" 'face compilation-info-face) (annot-trim (nth 2 candidate)))
-                  (format " %-4s %s  : %s" (propertize (number-to-string (nth 0 candidate)) 'face compilation-line-face) (propertize "<H>" 'face compilation-info-face) (nth 2 candidate)))))
+                    (cons (format " %-4s %s  : %s" (propertize (number-to-string (plist-get candidate :linum)) 'face compilation-line-face) (propertize "<T>" 'face compilation-info-face) (annot-trim (plist-get candidate :text))) candidate)
+                  (cons (format " %-4s %s  : %s" (propertize (number-to-string (plist-get candidate :linum)) 'face compilation-line-face) (propertize "<H>" 'face compilation-info-face) (plist-get candidate :text)) candidate))))
           annots)
   )
 
@@ -139,11 +139,55 @@
               annots
               :dynamic-collection nil
               :action #'(lambda (candidate)
-                          (setq line (nth 0 (split-string candidate ":")))
-                          (goto-line (string-to-number line))
-                          )
+                          (let ((annot (cdr candidate)))
+                            (goto-line (plist-get annot :linum))))
               ))
   )
+
+(defun counsel-annot--invalid-overlay-text (type begin end ov)
+  (if (equal type 'text)
+      (substring-no-properties
+       (or (plist-get ov 'before-string) ""))
+    (if counsel-annot-join-lines
+        (replace-regexp-in-string (rx (zero-or-more " ") (one-or-more "\n") (zero-or-more " ")) " " (buffer-substring-no-properties begin end))
+      (buffer-substring-no-properties begin end))))
+
+(defun counsel-annot--invalid-candidate (ov)
+  (let* ((begin (annot-get-beg ov))
+         (end (annot-get-end ov))
+         (type (plist-get ov :type))
+         (text (counsel-annot--invalid-overlay-text type begin end ov))
+         (linum (line-number-at-pos begin))
+         )
+    (list :linum linum :type type :text text :begin begin :end end)
+    ))
+
+
+(defun counsel-annot--make-invalid-annotations()
+  (when annot-buffer-invalid-annotations
+    (dolist (annot annot-buffer-invalid-annotations)
+      (add-to-list 'candidates (counsel-annot--candidate annot)))
+    (cl-sort candidates 'counsel-annot<)
+    ))
+
+
+(defun counsel-annot-invalid-collector ()
+  (let ((annots (counsel-annot-candidate-transformer (counsel-annot--make-invalid-annotations))))
+    annots
+    ))
+
+(defun counsel-annot-invalid-annotations ()
+  (interactive)
+  (let ((annots (counsel-annot-invalid-collector)))
+    (ivy-read "Annotations: "
+              annots
+              :dynamic-collection nil
+              :action #'(lambda (candidate)
+                          (let ((annot (cdr candidate)))
+                            (goto-line (plist-get annot :linum))))
+              ))
+  )
+
 
 (provide 'counsel-annot)
 ;;; annot.el ends here

@@ -46,10 +46,6 @@
 ;; 
 ;; Keybindings:
 ;;
-;; * [C-x C-a] - Add a new annotation
-;;               Highlight the current region if any (annot-edit/add)
-;; * [C-x C-r] - Remove the annotation/highlight at point (annot-remove)
-;; * [C-x C-i] - Insert a new image at point (annot-add-image)
 ;;
 ;; User Commands:
 ;; 
@@ -208,6 +204,11 @@ symbol plist buffer-local; so this variable has to exist
 separately.")
 (make-variable-buffer-local 'annot-buffer-plist)
 
+(defvar annot-buffer-invalid-annotations nil
+  "List of invalid annotations in the buffer.
+ This list stores overlays that cannot be recoverred when loading annotations.")
+(make-variable-buffer-local 'annot-buffer-invalid-annotations)
+
 
 ;;;; Macros
 
@@ -309,11 +310,11 @@ If a regioin is specified, remove all annotations and highlights within it."
         (unless silent
           (message "Annotation removed.")))
       (while (and annot-broader-removal-p
-                 (setq ov (or
-                           (car (overlays-in (setq p (point)) p))
-                           ;; relax finding of an overlay
-                           (car (overlays-in (max (point-min) (1- p)) p))
-                           (car (overlays-in p (min (point-max) (1+ p)))))))
+                  (setq ov (or
+                            (car (overlays-in (setq p (point)) p))
+                            ;; relax finding of an overlay
+                            (car (overlays-in (max (point-min) (1- p)) p))
+                            (car (overlays-in p (min (point-max) (1+ p)))))))
         (delete-overlay ov)))))
 
 (defun annot-edit/add ()
@@ -809,11 +810,11 @@ previous filename, return delete the previous file."
    ;; associated annot file.
    ((null annot-buffer-overlays)
     (let* ((md5 (plist-get annot-buffer-plist :md5))
-          (tag (plist-get annot-buffer-plist :tag))
-          (dirname (annot-file-base-directory-tag tag))
-          (relative-filename (plist-get annot-buffer-plist :relative-filename))
-          (filename (concat dirname relative-filename))
-          old-annot-filename symlink)
+           (tag (plist-get annot-buffer-plist :tag))
+           (dirname (annot-file-base-directory-tag tag))
+           (relative-filename (plist-get annot-buffer-plist :relative-filename))
+           (filename (concat dirname relative-filename))
+           old-annot-filename symlink)
       (when (and filename md5)
         (setq old-annot-filename (annot-get-annot-filename filename md5))
         (if (file-readable-p old-annot-filename)
@@ -924,8 +925,8 @@ Create the annot content directory if it does not exist."
 (defun annot-get-symlink (filename)
   "Return symlink path."
   (when filename
-  (let ((backup-directory-alist `(("." . ,(annot-symlinks-directory filename)))))
-    (make-backup-file-name (expand-file-name filename)))))
+    (let ((backup-directory-alist `(("." . ,(annot-symlinks-directory filename)))))
+      (make-backup-file-name (expand-file-name filename)))))
 
 (defsubst annot-get-beg (ov-plist)
   "Get the starting point of an annotation represented by `ov-plist'."
@@ -995,6 +996,8 @@ Only annotation files use this function internally."
           (delete-overlay ov))
         (setq annot-buffer-overlays nil))
 
+      (setq annot-buffer-invalid-annotations nil)
+
       ;; Sort annotations/highlights by beg position.
       ;;
       ;; The following constraint would omit some extra computation. However,
@@ -1034,7 +1037,8 @@ Only annotation files use this function internally."
               (when (null invalid-found-p) ;; first time
                 (setq invalid-found-p t))
               (let ((prev-string (plist-get ov-plist :prev))
-                    (type (plist-get ov-plist :type)))
+                    (type (plist-get ov-plist :type))
+                    found)
                 (goto-char (max (point-min) (- last-valid-point
                                                (length prev-string))))
                 (catch 'found
@@ -1049,7 +1053,10 @@ Only annotation files use this function internally."
                     (when (annot-valid-p ov-plist 'force-strict-checking)
                       (push (annot-recover-overlay ov-plist) annot-buffer-overlays)
                       (setq last-valid-point (annot-get-beg ov-plist))
-                      (throw 'found t))))))))))
+                      (setq found t)
+                      (throw 'found t))))
+                (when (not found)
+                  (push ov-plist annot-buffer-invalid-annotations))))))))
 
       (setq annot-buffer-plist
             `(:md5 ,(plist-get annotations-info :md5)
@@ -1139,9 +1146,6 @@ Only annotation files use this function internally."
                        (eshell-command-result command)
                      (shell-command-to-string command))))))))
   (setq annot-buffer-modified-p nil))
-
-;; (add-hook 'after-save-hook 'annot-after-save-hook)
-;; (add-hook 'find-file-hook 'annot-load-annotations)
 
 (add-hook 'after-save-hook 'annot-after-save-hook)
 (add-hook 'find-file-hook 'annot-load-annotations)
