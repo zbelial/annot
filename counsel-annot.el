@@ -134,9 +134,15 @@
 
 (defun counsel-annot-annotations ()
   (interactive)
-  (let ((annots (counsel-annot-collector)))
+  (let ((annots (counsel-annot-collector))
+        (preselect 0)
+        (linum (line-number-at-pos)))
+    (dolist (a annots)
+      (when (< (plist-get (cdr a) :linum) linum)
+        (setq preselect (1+ preselect))))
     (ivy-read "Annotations: "
               annots
+              :preselect preselect
               :dynamic-collection nil
               :action #'(lambda (candidate)
                           (let ((annot (cdr candidate)))
@@ -178,7 +184,8 @@
 
 (defun counsel-annot-invalid-annotations ()
   (interactive)
-  (let ((annots (counsel-annot-invalid-collector)))
+  (let ((annots (counsel-annot-invalid-collector))
+        )
     (ivy-read "Annotations: "
               annots
               :dynamic-collection nil
