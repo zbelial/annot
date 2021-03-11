@@ -1,4 +1,4 @@
-;;; counsel-annot.el --- counsel interface to list all annotations.
+;;; counsel-annot.el --- counsel interface to list all annotations. -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2011-2020 zbelial
 
@@ -120,7 +120,7 @@
 
 (defun counsel-annot-candidate-transformer (annots)
   (mapcar #'(lambda (candidate)
-              (let ((type (plist-get :type candidate)))
+              (let ((type (plist-get candidate :type)))
                 (if (eq type 'text)
                     (cons (format " %-4s %s  : %s" (propertize (number-to-string (plist-get candidate :linum)) 'face compilation-line-face) (propertize "<T>" 'face compilation-info-face) (annot-trim (plist-get candidate :text))) candidate)
                   (cons (format " %-4s %s  : %s" (propertize (number-to-string (plist-get candidate :linum)) 'face compilation-line-face) (propertize "<H>" 'face compilation-info-face) (plist-get candidate :text)) candidate))))
