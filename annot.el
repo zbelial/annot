@@ -1,4 +1,4 @@
-;;; annot.el --- a global annotator/highlighter for GNU Emacs -*- lexical-binding: t; -*-
+;;; annot.el --- a global annotator/highlighter for GNU Emacs -*- lexical-binding: nil; -*-
 
 ;; Copyright (C) 2010-2016 tkykhs
 
