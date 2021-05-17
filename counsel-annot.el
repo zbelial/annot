@@ -132,22 +132,62 @@
     annots
     ))
 
+(defvar-local counsel-annot--ostart nil)
+(defvar-local counsel-annot--opoint nil)
+(defun counsel-annot-annotations-update-fn ()
+  (with-ivy-window
+    (let ((current (ivy-state-current ivy-last))
+          item
+          marker
+          linum
+          )
+      ;; (message "current %S" current)
+      (when (not (string-empty-p current))
+        (setq item (nth (get-text-property 0 'idx current) (ivy-state-collection ivy-last)))
+        ;; (message "item %S" item)
+        (setq linum (plist-get (cdr item) :linum))
+        ;; (message "linum %S" linum)
+        (goto-line linum)
+        (recenter)
+        (let ((pulse-delay 0.5))
+          (pulse-momentary-highlight-one-line (point)))
+        )
+      ))
+  )
+
 (defun counsel-annot-annotations ()
   (interactive)
+  (setq counsel-annot--ostart (window-start))
+  (setq counsel-annot--opoint (point))
+  
   (let ((annots (counsel-annot-collector))
         (preselect 0)
-        (linum (line-number-at-pos)))
+        (linum (line-number-at-pos))
+        res)
     (dolist (a annots)
       (when (< (plist-get (cdr a) :linum) linum)
         (setq preselect (1+ preselect))))
-    (ivy-read "Annotations: "
-              annots
-              :preselect preselect
-              :dynamic-collection nil
-              :action #'(lambda (candidate)
-                          (let ((annot (cdr candidate)))
-                            (goto-line (plist-get annot :linum))))
-              ))
+    (unwind-protect
+        (progn
+          (setq res (ivy-read "Annotations: "
+                              annots
+                              :preselect preselect
+                              :dynamic-collection nil
+                              :update-fn #'counsel-annot-annotations-update-fn
+                              :action #'(lambda (candidate)
+                                          (let ((annot (cdr candidate)))
+                                            (goto-line (plist-get annot :linum))))
+                              ))
+          )
+      (unless res
+        (when (and counsel-annot--ostart counsel-annot--opoint)
+          (with-ivy-window
+            (goto-char counsel-annot--opoint)
+            (set-window-start (selected-window) counsel-annot--ostart)
+            )
+          ))
+      )
+    )
   )
 
 (defun counsel-annot--invalid-overlay-text (type begin end ov)
